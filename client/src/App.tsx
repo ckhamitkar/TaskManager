@@ -43,6 +43,7 @@ const DELETE_TASK = gql`
   }
 `;
 
+
 function TaskApp() {
   const { loading, error, data, refetch } = useQuery(GET_TASKS);
   const [addTask] = useMutation(ADD_TASK);
@@ -50,8 +51,8 @@ function TaskApp() {
   const [deleteTask] = useMutation(DELETE_TASK);
   const [newTitle, setNewTitle] = useState('');
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error.message}</p>;
+  if (loading) return <p style={{ textAlign: 'center', color: '#6366f1', marginTop: '2rem' }}>Loading...</p>;
+  if (error) return <p style={{ textAlign: 'center', color: '#ef4444', marginTop: '2rem' }}>Error: {error.message}</p>;
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,28 +73,27 @@ function TaskApp() {
   };
 
   return (
-    <div className="App" style={{ maxWidth: 400, margin: '2rem auto', fontFamily: 'sans-serif' }}>
-      <h2>Task List</h2>
-      <form onSubmit={handleAdd} style={{ marginBottom: 16 }}>
+    <div className="task-container">
+      <div className="task-title">Task List</div>
+      <form className="task-form" onSubmit={handleAdd}>
         <input
           value={newTitle}
           onChange={e => setNewTitle(e.target.value)}
           placeholder="New task title"
-          style={{ padding: 8, width: '70%' }}
         />
-        <button type="submit" style={{ padding: 8, marginLeft: 8 }}>Add</button>
+        <button type="submit">Add</button>
       </form>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul className="task-list">
         {data.tasks.map((task: any) => (
-          <li key={task.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+          <li key={task.id} className="task-item">
             <input
+              className="task-checkbox"
               type="checkbox"
               checked={task.completed}
               onChange={() => handleToggle(task.id, task.completed)}
-              style={{ marginRight: 8 }}
             />
-            <span style={{ flex: 1, textDecoration: task.completed ? 'line-through' : 'none' }}>{task.title}</span>
-            <button onClick={() => handleDelete(task.id)} style={{ marginLeft: 8 }}>Delete</button>
+            <span className={`task-text${task.completed ? ' completed' : ''}`}>{task.title}</span>
+            <button className="task-delete" onClick={() => handleDelete(task.id)} title="Delete">×</button>
           </li>
         ))}
       </ul>
@@ -101,11 +101,14 @@ function TaskApp() {
   );
 }
 
+
 function App() {
   return (
-    <ApolloProvider client={client}>
-      <TaskApp />
-    </ApolloProvider>
+    <div className="App">
+      <ApolloProvider client={client}>
+        <TaskApp />
+      </ApolloProvider>
+    </div>
   );
 }
 
