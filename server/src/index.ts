@@ -1,4 +1,5 @@
 import { ApolloServer, gql } from 'apollo-server';
+import mongoose from 'mongoose';
 
 const typeDefs = gql`
   type Task {
@@ -16,42 +17,55 @@ const typeDefs = gql`
   }
 `;
 
-interface Task {
-  id: string;
-  title: string;
-  completed: boolean;
-}
 
-let tasks: Task[] = [];
+const taskSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  completed: { type: Boolean, default: false }
+});
+
+const TaskModel = mongoose.model('Task', taskSchema);
 
 const resolvers = {
   Query: {
-    tasks: () => tasks,
+    tasks: async () => {
+      const tasks = await TaskModel.find();
+      return tasks.map(task => ({
+        id: task._id.toString(),
+        title: task.title,
+        completed: task.completed
+      }));
+    },
   },
   Mutation: {
-    addTask: (_: any, { title }: { title: string }) => {
-      const newTask = { id: Date.now().toString(), title, completed: false };
-      tasks.push(newTask);
-      return newTask;
+    addTask: async (_: any, { title }: { title: string }) => {
+      const newTask = new TaskModel({ title });
+      await newTask.save();
+      return { id: newTask._id.toString(), title: newTask.title, completed: newTask.completed };
     },
-    updateTask: (_: any, { id, title, completed }: { id: string; title?: string; completed?: boolean }) => {
-      const task = tasks.find(t => t.id === id);
+    updateTask: async (_: any, { id, title, completed }: { id: string; title?: string; completed?: boolean }) => {
+      const task = await TaskModel.findById(id);
       if (!task) throw new Error('Task not found');
       if (title !== undefined) task.title = title;
       if (completed !== undefined) task.completed = completed;
-      return task;
+      await task.save();
+      return { id: task._id.toString(), title: task.title, completed: task.completed };
     },
-    deleteTask: (_: any, { id }: { id: string }) => {
-      const idx = tasks.findIndex(t => t.id === id);
-      if (idx === -1) return false;
-      tasks.splice(idx, 1);
-      return true;
+    deleteTask: async (_: any, { id }: { id: string }) => {
+      const result = await TaskModel.deleteOne({ _id: id });
+      return result.deletedCount === 1;
     },
   },
 };
 
-const server = new ApolloServer({ typeDefs, resolvers });
+async function startServer() {
+  await mongoose.connect('mongodb://localhost:27017/taskmanager', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  } as any);
+  const server = new ApolloServer({ typeDefs, resolvers });
+  server.listen().then(({ url }) => {
+    console.log(`🚀 Server ready at ${url}`);
+  });
+}
 
-server.listen().then(({ url }) => {
-  console.log(`🚀 Server ready at ${url}`);
-});
+startServer();
